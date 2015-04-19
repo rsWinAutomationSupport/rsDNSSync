@@ -1,4 +1,3 @@
-# rsDNSSync
 rsDNSSync SyncZone{
   ZoneName = "<Domain Name>"
   AdapterName = "<Name of the NIC Adapter to gather IP Addresses from {Public, ServiceNet, Other}"
