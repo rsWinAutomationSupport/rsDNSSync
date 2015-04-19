@@ -60,6 +60,7 @@ function Test-TargetResource{
                     $recordEnum = New-Object psobject -Property @{'name'=$record.HostName;'RecordData'=$record.RecordData.IPv4Address.IPAddressToString}
                     $localRecords += $recordEnum
                 }
+                if($localRecords.Count -eq 0){Write-Verbose "Local Zone $($ZoneName) contains no records."; Return $false}
                 $cloudArray = $cloudRecords | sort RecordData
                 foreach($record in $localRecords){
                     $count=0
@@ -73,7 +74,7 @@ function Test-TargetResource{
                             Write-Verbose "Cloud record $($cloudArray[$count].name) did not match $($record.name)"
                             $count++
                         }
-                    }until($count -eq $cloudArray.Count)
+                    }until($count -eq $cloudRecords.Count)
                 }
                 $localArray = $localRecords | sort RecordData
                 $cloudRecords = $cloudRecords | sort RecordData
@@ -89,7 +90,7 @@ function Test-TargetResource{
                             Write-Verbose "Local record $($localArray[$count].name) did not match $($record.name)"
                             $count++
                         }
-                    }until($count -eq $localArray.Count)
+                    }until($count -eq $localRecords.Count)
                 }
                 if(($cloudArray -ne $null) -or ($localArray -ne $null)){Write-Verbose "One or more DNS records are out of Sync"; Return $false}
                 else{Write-Verbose "Servers in API match records in Local DNS Server"; Return $true}
@@ -141,23 +142,26 @@ function Set-TargetResource{
                         Write-Verbose "Cloud record $($cloudArray[$count].name) did not match $($record.name)"
                         $count++
                     }
-                }until($count -eq $cloudArray.Count)
+                }until($count -eq $cloudRecords.Count)
             }
             $localArray = $localRecords | sort RecordData
             $cloudRecords = $cloudRecords | sort RecordData
-            foreach($record in $cloudRecords){
-                $count=0
-                do{
-                    if($localArray[$count] -match $record){
-                        Write-Verbose "Found a match with $($record.name): $($record.RecordData)"
-                        $localArray = $localArray | ?{$_ -ne $localArray[$count]}
-                        break
-                    }
-                    else{
-                        Write-Verbose "Local record $($localArray[$count].name) did not match $($record.name)"
-                        $count++
-                    }
-                }until($count -eq $localArray.Count)
+
+            if($localRecords.Count -ne 0){
+                foreach($record in $cloudRecords){
+                    $count=0
+                    do{
+                        if($localArray[$count] -match $record){
+                            Write-Verbose "Found a match with $($record.name): $($record.RecordData)"
+                            $localArray = $localArray | ?{$_ -ne $localArray[$count]}
+                            break
+                        }
+                        else{
+                            Write-Verbose "Local record $($localArray[$count].name) did not match $($record.name)"
+                            $count++
+                        }
+                    }until($count -eq $localRecords.Count)
+                }
             }
             if($cloudArray -ne $null){
                 foreach($record in $cloudArray){
