@@ -123,7 +123,7 @@ function Set-TargetResource{
             }
 
             $localRecords = @()
-            foreach($record in Get-DnsServerResourceRecord -ZoneName showpitch | ? RecordType -eq A){
+            foreach($record in Get-DnsServerResourceRecord -ZoneName $ZoneName | ? RecordType -eq A){
                 $recordEnum = New-Object psobject -Property @{'name'=$record.HostName;'RecordData'=$record.RecordData.IPv4Address.IPAddressToString}
                 $localRecords += $recordEnum
             }
