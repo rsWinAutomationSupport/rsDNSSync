@@ -48,7 +48,7 @@ function Test-TargetResource{
         $ZoneName
     )
 
-    $cloudRecords = Get-rsCloudServersInfo | select name,@{n="RecordData";e={$_.addresses.$AdapterName.addr}}
+    $cloudRecords = Get-rsCloudServersInfo | select name,@{n="RecordData";e={$_.addresses.$AdapterName.addr}} | sort RecordData
 
     switch($DNSProvider){
         CloudServer{
@@ -60,37 +60,27 @@ function Test-TargetResource{
                     $recordEnum = New-Object psobject -Property @{'name'=$record.HostName;'RecordData'=$record.RecordData.IPv4Address.IPAddressToString}
                     $localRecords += $recordEnum
                 }
+                $localRecords = $localRecords | sort RecordData
                 if($localRecords.Count -eq 0){Write-Verbose "Local Zone $($ZoneName) contains no records."; Return $false}
-                $cloudArray = $cloudRecords | sort RecordData
+                $cloudArray = $cloudRecords
                 foreach($record in $localRecords){
-                    $count=0
-                    do{
-                        if($cloudArray[$count] -match $record){
-                            Write-Verbose "Found a match with $($record.name): $($record.RecordData)"
-                            $cloudArray = $cloudArray | ?{$_ -ne $cloudArray[$count]}
-                            break
-                        }
-                        else{
-                            Write-Verbose "Cloud record $($cloudArray[$count].name) did not match $($record.name)"
-                            $count++
-                        }
-                    }until($count -eq $cloudRecords.Count)
+                    if(($cloudRecords.name.Contains($record.name)) -and ($cloudRecords.RecordData.Contains($record.RecordData))){
+                        Write-Verbose "Target match found for $($record.name): $($record.RecordData)"
+                        $cloudArray = $cloudArray | ? name -ne $record.name
+                    }
+                    else{
+                        Write-Verbose "Target match found for $($record.name): $($record.RecordData)"
+                    }
                 }
-                $localArray = $localRecords | sort RecordData
-                $cloudRecords = $cloudRecords | sort RecordData
+                $localArray = $localRecords
                 foreach($record in $cloudRecords){
-                    $count=0
-                    do{
-                        if($localArray[$count] -match $record){
-                            Write-Verbose "Found a match with $($record.name): $($record.RecordData)"
-                            $localArray = $localArray | ?{$_ -ne $localArray[$count]}
-                            break
-                        }
-                        else{
-                            Write-Verbose "Local record $($localArray[$count].name) did not match $($record.name)"
-                            $count++
-                        }
-                    }until($count -eq $localRecords.Count)
+                    if(($localRecords.name.Contains($record.name)) -and ($localRecords.RecordData.Contains($record.RecordData))){
+                        Write-Verbose "Target match found for $($record.name): $($record.RecordData)"
+                        $localArray = $localArray | ? name -ne $record.name
+                    }
+                    else{
+                        Write-Verbose "Target match not found for $($record.name): $($record.RecordData)"
+                    }
                 }
                 if(($cloudArray -ne $null) -or ($localArray -ne $null)){Write-Verbose "One or more DNS records are out of Sync"; Return $false}
                 else{Write-Verbose "Servers in API match records in Local DNS Server"; Return $true}
@@ -129,38 +119,18 @@ function Set-TargetResource{
                 $localRecords += $recordEnum
             }
 
-            $cloudArray = $cloudRecords | sort RecordData
+            $cloudArray = $cloudRecords
             foreach($record in $localRecords){
-                $count=0
-                do{
-                    if($cloudArray[$count] -match $record){
-                        Write-Verbose "Found a match with $($record.name): $($record.RecordData)"
-                        $cloudArray = $cloudArray | ?{$_ -ne $cloudArray[$count]}
-                        break
-                    }
-                    else{
-                        Write-Verbose "Cloud record $($cloudArray[$count].name) did not match $($record.name)"
-                        $count++
-                    }
-                }until($count -eq $cloudRecords.Count)
+                if(($cloudRecords.name.Contains($record.name)) -and ($cloudRecords.RecordData.Contains($record.RecordData))){
+                    $cloudArray = $cloudArray | ? name -ne $record.name
+                }
             }
-            $localArray = $localRecords | sort RecordData
-            $cloudRecords = $cloudRecords | sort RecordData
-
-            if($localRecords.Count -ne 0){
+            if(($localRecords -ne $null) -or ($localRecords.count -ne 0)){
+                $localArray = $localRecords
                 foreach($record in $cloudRecords){
-                    $count=0
-                    do{
-                        if($localArray[$count] -match $record){
-                            Write-Verbose "Found a match with $($record.name): $($record.RecordData)"
-                            $localArray = $localArray | ?{$_ -ne $localArray[$count]}
-                            break
-                        }
-                        else{
-                            Write-Verbose "Local record $($localArray[$count].name) did not match $($record.name)"
-                            $count++
-                        }
-                    }until($count -eq $localRecords.Count)
+                    if(($localRecords.name.Contains($record.name)) -and ($localRecords.RecordData.Contains($record.RecordData))){
+                        $localArray = $localArray | ? name -ne $record.name
+                    }
                 }
             }
             if($cloudArray -ne $null){
