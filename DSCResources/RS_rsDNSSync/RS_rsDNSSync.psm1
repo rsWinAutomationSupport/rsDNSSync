@@ -32,11 +32,11 @@ function Get-TargetResource{
 
     @{
         "DNSProvider" = $DNSProvider
-        "localDNSPresent" = $localDNSPresent
+        #"localDNSPresent" = $localDNSPresent
         "ZoneName" = $ZoneName
         "TargetAdapter" = $AdapterName
-        "CloudServers" = $cloudRecords
-        "LocalRecords" = $localRecords
+        #"CloudServers" = $cloudRecords
+        #"LocalRecords" = $localRecords
     }
 }
 function Test-TargetResource{
