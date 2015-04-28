@@ -34,7 +34,7 @@ function Get-TargetResource{
         "DNSProvider" = $DNSProvider
         #"localDNSPresent" = $localDNSPresent
         "ZoneName" = $ZoneName
-        "TargetAdapter" = $AdapterName
+        "AdapterName" = $AdapterName
         #"CloudServers" = $cloudRecords
         #"LocalRecords" = $localRecords
     }
@@ -66,17 +66,19 @@ function Test-TargetResource{
                 foreach($record in $localRecords){
                     if(($cloudRecords.name.Contains($record.name)) -and ($cloudRecords.RecordData.Contains($record.RecordData))){
                         Write-Verbose "Target match found for $($record.name): $($record.RecordData)"
-                        $cloudArray = $cloudArray | ? name -ne $record.name
+                        #$cloudArray = $cloudArray | ? name -ne $record.name
+                        $cloudArray = $cloudArray | ?{$_ -notmatch $record}
                     }
                     else{
-                        Write-Verbose "Target match found for $($record.name): $($record.RecordData)"
+                        Write-Verbose "Target match not found for $($record.name): $($record.RecordData)"
                     }
                 }
                 $localArray = $localRecords
                 foreach($record in $cloudRecords){
                     if(($localRecords.name.Contains($record.name)) -and ($localRecords.RecordData.Contains($record.RecordData))){
                         Write-Verbose "Target match found for $($record.name): $($record.RecordData)"
-                        $localArray = $localArray | ? name -ne $record.name
+                        #$localArray = $localArray | ? name -ne $record.name
+                        $localArray = $localArray | ?{$_ -notmatch $record}
                     }
                     else{
                         Write-Verbose "Target match not found for $($record.name): $($record.RecordData)"
@@ -122,14 +124,16 @@ function Set-TargetResource{
             $cloudArray = $cloudRecords
             foreach($record in $localRecords){
                 if(($cloudRecords.name.Contains($record.name)) -and ($cloudRecords.RecordData.Contains($record.RecordData))){
-                    $cloudArray = $cloudArray | ? name -ne $record.name
+                    #$cloudArray = $cloudArray | ? name -ne $record.name
+                    $cloudArray = $cloudArray | ?{$_ -notmatch $record}
                 }
             }
             if(($localRecords -ne $null) -or ($localRecords.count -ne 0)){
                 $localArray = $localRecords
                 foreach($record in $cloudRecords){
                     if(($localRecords.name.Contains($record.name)) -and ($localRecords.RecordData.Contains($record.RecordData))){
-                        $localArray = $localArray | ? name -ne $record.name
+                        #$localArray = $localArray | ? name -ne $record.name
+                        $localArray = $localArray | ?{$_ -notmatch $record}
                     }
                 }
             }
