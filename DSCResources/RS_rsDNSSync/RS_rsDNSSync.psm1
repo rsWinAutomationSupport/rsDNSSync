@@ -48,7 +48,7 @@ function Test-TargetResource{
         $ZoneName
     )
 
-    $cloudRecords = Get-rsCloudServersInfo | select name,@{n="RecordData";e={$_.addresses.$AdapterName.addr}} | sort RecordData
+    $cloudRecords = Get-rsCloudServersInfo | ? status -eq "ACTIVE" | select name,@{n="RecordData";e={$_.addresses.$AdapterName.addr}} | sort RecordData
 
     switch($DNSProvider){
         CloudServer{
@@ -102,7 +102,7 @@ function Set-TargetResource{
         $ZoneName
     )
 
-    $cloudRecords = Get-rsCloudServersInfo | select name,@{n="RecordData";e={$_.addresses.$AdapterName.addr}}
+    $cloudRecords = Get-rsCloudServersInfo | ? status -eq "ACTIVE" | select name,@{n="RecordData";e={$_.addresses.$AdapterName.addr}}
 
     switch($DNSProvider){
         CloudServer{
