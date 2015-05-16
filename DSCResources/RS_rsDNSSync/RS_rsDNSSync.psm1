@@ -10,7 +10,7 @@ function Get-TargetResource{
         $ZoneName
     )
 
-    switch($DNSProvider){
+    <#switch($DNSProvider){
         CloudServer{
             $localDNSPresent = (Get-WindowsFeature DNS).Installed
             if($localDNSPresent -eq $true){
@@ -28,15 +28,12 @@ function Get-TargetResource{
 
         }
     }
-    $cloudRecords = Get-rsCloudServersInfo | select name,@{n="RecordData";e={$_.addresses.$AdapterName.addr}}
+    $cloudRecords = Get-rsCloudServersInfo | ? status -eq "ACTIVE" | select @{n="name";e={$_.name.tolower()}},@{n="RecordData";e={$_.addresses.$AdapterName.addr}}#>
 
     @{
         "DNSProvider" = $DNSProvider
-        #"localDNSPresent" = $localDNSPresent
         "ZoneName" = $ZoneName
         "AdapterName" = $AdapterName
-        #"CloudServers" = $cloudRecords
-        #"LocalRecords" = $localRecords
     }
 }
 function Test-TargetResource{
@@ -48,7 +45,7 @@ function Test-TargetResource{
         $ZoneName
     )
 
-    $cloudRecords = Get-rsCloudServersInfo | ? status -eq "ACTIVE" | select name,@{n="RecordData";e={$_.addresses.$AdapterName.addr}} | sort RecordData
+    $cloudRecords = Get-rsCloudServersInfo | ? status -eq "ACTIVE" | select @{n="name";e={$_.name.tolower()}},@{n="RecordData";e={$_.addresses.$AdapterName.addr}} | sort RecordData
 
     switch($DNSProvider){
         CloudServer{
@@ -66,7 +63,6 @@ function Test-TargetResource{
                 foreach($record in $localRecords){
                     if(($cloudRecords.name.Contains($record.name)) -and ($cloudRecords.RecordData.Contains($record.RecordData))){
                         Write-Verbose "Target match found for $($record.name): $($record.RecordData)"
-                        #$cloudArray = $cloudArray | ? name -ne $record.name
                         $cloudArray = $cloudArray | ?{$_ -notmatch $record}
                     }
                     else{
@@ -77,7 +73,6 @@ function Test-TargetResource{
                 foreach($record in $cloudRecords){
                     if(($localRecords.name.Contains($record.name)) -and ($localRecords.RecordData.Contains($record.RecordData))){
                         Write-Verbose "Target match found for $($record.name): $($record.RecordData)"
-                        #$localArray = $localArray | ? name -ne $record.name
                         $localArray = $localArray | ?{$_ -notmatch $record}
                     }
                     else{
@@ -102,7 +97,7 @@ function Set-TargetResource{
         $ZoneName
     )
 
-    $cloudRecords = Get-rsCloudServersInfo | ? status -eq "ACTIVE" | select name,@{n="RecordData";e={$_.addresses.$AdapterName.addr}}
+    $cloudRecords = Get-rsCloudServersInfo | ? status -eq "ACTIVE" | select @{n="name";e={$_.name.tolower()}},@{n="RecordData";e={$_.addresses.$AdapterName.addr}} | sort RecordData
 
     switch($DNSProvider){
         CloudServer{
@@ -124,7 +119,6 @@ function Set-TargetResource{
             $cloudArray = $cloudRecords
             foreach($record in $localRecords){
                 if(($cloudRecords.name.Contains($record.name)) -and ($cloudRecords.RecordData.Contains($record.RecordData))){
-                    #$cloudArray = $cloudArray | ? name -ne $record.name
                     $cloudArray = $cloudArray | ?{$_ -notmatch $record}
                 }
             }
@@ -132,7 +126,6 @@ function Set-TargetResource{
                 $localArray = $localRecords
                 foreach($record in $cloudRecords){
                     if(($localRecords.name.Contains($record.name)) -and ($localRecords.RecordData.Contains($record.RecordData))){
-                        #$localArray = $localArray | ? name -ne $record.name
                         $localArray = $localArray | ?{$_ -notmatch $record}
                     }
                 }
