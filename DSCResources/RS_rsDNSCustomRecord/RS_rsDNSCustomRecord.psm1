@@ -132,7 +132,7 @@ function Set-TargetResource{
         [Parameter(Mandatory = $true)]
         $HostName,
         [Parameter(Mandatory = $true)]
-        [ValidateSet("A","CNAME","Mx","Ptr")]
+        [ValidateSet("A","CNAME","Mx")]
         $RecordType,
         [Parameter(Mandatory = $true)]
         $RecordData
@@ -163,3 +163,4 @@ function Set-TargetResource{
         }
     }
 }
+Export-ModuleMember -Function *-TargetResource
