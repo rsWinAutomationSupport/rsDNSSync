@@ -10,26 +10,6 @@ function Get-TargetResource{
         $ZoneName
     )
 
-    <#switch($DNSProvider){
-        CloudServer{
-            $localDNSPresent = (Get-WindowsFeature DNS).Installed
-            if($localDNSPresent -eq $true){
-                if((Get-DnsServerZone $ZoneName -ErrorAction SilentlyContinue) -ne $null){
-                    $localRecords = @()
-                    foreach($record in Get-DnsServerResourceRecord -ZoneName $ZoneName | ? RecordType -eq A){
-                        $recordEnum = New-Object psobject -Property @{'name'=$record.HostName;'RecordData'=$record.RecordData.IPv4Address.IPAddressToString}
-                        $localRecords += $recordEnum
-                    }
-                }
-            }
-            else{$localRecords = $null}
-        }
-        CloudDNS{
-
-        }
-    }
-    $cloudRecords = Get-rsCloudServersInfo | ? status -eq "ACTIVE" | select @{n="name";e={$_.name.tolower()}},@{n="RecordData";e={$_.addresses.$AdapterName.addr}}#>
-
     @{
         "DNSProvider" = $DNSProvider
         "ZoneName" = $ZoneName
