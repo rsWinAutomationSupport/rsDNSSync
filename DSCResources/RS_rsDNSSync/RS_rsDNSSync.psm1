@@ -1,4 +1,54 @@
 ﻿. (Get-rsSecrets)
+function GetLocalRecords{
+    param(
+        $ZoneName
+    )
+
+    $localRecords = @()
+    foreach($record in Get-DnsServerResourceRecord -ZoneName $ZoneName | ? RecordType -eq A){
+        $recordEnum = New-Object psobject -Property @{'name'=$record.HostName;'RecordData'=$record.RecordData.IPv4Address.IPAddressToString}
+        $localRecords += $recordEnum
+    }
+    $localRecords = $localRecords | sort RecordData
+    Return $localRecords
+}
+function CompareRecords{
+    param(
+        $records,
+        $foreignRecords
+    )
+
+    $recordArray = $foreignRecords
+
+    foreach($record in $records){
+        if(($foreignRecords.name.Contains($record.name)) -and ($foreignRecords.RecordData.Contains($record.RecordData))){
+            Write-Verbose "Target match found for $($record.name): $($record.RecordData)"
+            $recordArray = $recordArray | ?{$_ -notmatch $record}
+        }
+        else{
+            Write-Verbose "Target match not found for $($record.name): $($record.RecordData)"
+        }
+    }
+    Return $recordArray
+}
+function SyncRecords{
+    param(
+        [ValidateSet("SyncToLocal","SyncToCloud")]
+        $SyncDirection,
+        $HostName,
+        $RecordData,
+        $ZoneName
+    )
+
+    switch($SyncDirection){
+        SyncToLocal{
+            Add-DnsServerResourceRecord -ZoneName $ZoneName -A -Name $HostName -IPv4Address $RecordData -Verbose
+        }
+        SyncToCloud{
+            Remove-DnsServerResourceRecord -ZoneName $ZoneName -RRType A -Name $HostName -RecordData $RecordData -Force -Verbose
+        }
+    }
+}
 function Get-TargetResource{
     [OutputType([hashtable])]
     param(
@@ -29,37 +79,16 @@ function Test-TargetResource{
 
     switch($DNSProvider){
         CloudServer{
-            if(!(Get-WindowsFeature DNS).Installed){Return $false}
-            elseif((Get-DnsServerZone $ZoneName -ErrorAction SilentlyContinue) -eq $null){Return $false}
+            if(!(Get-WindowsFeature DNS).Installed){Write-Verbose "The DNS Role is not installed.";Return $false}
+            elseif((Get-DnsServerZone $ZoneName -ErrorAction SilentlyContinue) -eq $null){Write-Verbose "The zone $($ZoneName) does not exist";Return $false}
             else{
-                $localRecords = @()
-                foreach($record in Get-DnsServerResourceRecord -ZoneName $ZoneName | ? RecordType -eq A){
-                    $recordEnum = New-Object psobject -Property @{'name'=$record.HostName;'RecordData'=$record.RecordData.IPv4Address.IPAddressToString}
-                    $localRecords += $recordEnum
-                }
-                $localRecords = $localRecords | sort RecordData
+                $localRecords = GetLocalRecords -ZoneName $ZoneName
                 if($localRecords.Count -eq 0){Write-Verbose "Local Zone $($ZoneName) contains no records."; Return $false}
-                $cloudArray = $cloudRecords
-                foreach($record in $localRecords){
-                    if(($cloudRecords.name.Contains($record.name)) -and ($cloudRecords.RecordData.Contains($record.RecordData))){
-                        Write-Verbose "Target match found for $($record.name): $($record.RecordData)"
-                        $cloudArray = $cloudArray | ?{$_ -notmatch $record}
-                    }
-                    else{
-                        Write-Verbose "Target match not found for $($record.name): $($record.RecordData)"
-                    }
-                }
-                $localArray = $localRecords
-                foreach($record in $cloudRecords){
-                    if(($localRecords.name.Contains($record.name)) -and ($localRecords.RecordData.Contains($record.RecordData))){
-                        Write-Verbose "Target match found for $($record.name): $($record.RecordData)"
-                        $localArray = $localArray | ?{$_ -notmatch $record}
-                    }
-                    else{
-                        Write-Verbose "Target match not found for $($record.name): $($record.RecordData)"
-                    }
-                }
-                if(($cloudArray -ne $null) -or ($localArray -ne $null)){Write-Verbose "One or more DNS records are out of Sync"; Return $false}
+
+                $cloudArray = CompareRecords -records $localRecords -foreignRecords $cloudRecords
+                $localArray = CompareRecords -records $cloudRecords -foreignRecords $localRecords
+                
+                if(($cloudArray.count -gt 0) -or ($localArray.count -gt 0)){Write-Verbose "One or more DNS records are out of Sync"; Return $false}
                 else{Write-Verbose "Servers in API match records in Local DNS Server"; Return $true}
             }
         }
@@ -90,36 +119,19 @@ function Set-TargetResource{
                 Add-DnsServerPrimaryZone -Name $ZoneName -ZoneFile ($ZoneName + ".dns")
             }
 
-            $localRecords = @()
-            foreach($record in Get-DnsServerResourceRecord -ZoneName $ZoneName | ? RecordType -eq A){
-                $recordEnum = New-Object psobject -Property @{'name'=$record.HostName;'RecordData'=$record.RecordData.IPv4Address.IPAddressToString}
-                $localRecords += $recordEnum
-            }
-
-            $cloudArray = $cloudRecords
-            foreach($record in $localRecords){
-                if(($cloudRecords.name.Contains($record.name)) -and ($cloudRecords.RecordData.Contains($record.RecordData))){
-                    $cloudArray = $cloudArray | ?{$_ -notmatch $record}
-                }
-            }
+            $localRecords = GetLocalRecords -ZoneName $ZoneName
+            $cloudArray = CompareRecords -records $localRecords -foreignRecords $cloudRecords
             if(($localRecords -ne $null) -or ($localRecords.count -ne 0)){
-                $localArray = $localRecords
-                foreach($record in $cloudRecords){
-                    if(($localRecords.name.Contains($record.name)) -and ($localRecords.RecordData.Contains($record.RecordData))){
-                        $localArray = $localArray | ?{$_ -notmatch $record}
-                    }
-                }
+                $localArray = CompareRecords -records $cloudRecords -foreignRecords $localRecords
             }
-            if($cloudArray -ne $null){
+            if($cloudArray.count -gt 0){
                 foreach($record in $cloudArray){
-                    Write-Verbose "Adding $($record.name): $($record.RecordData) to local zone $($ZoneName)"
-                    Add-DnsServerResourceRecord -ZoneName $ZoneName -A -Name $record.name -IPv4Address $record.RecordData
+                    SyncRecords -SyncDirection SyncToLocal -HostName $record.name -RecordData $record.RecordData -ZoneName $ZoneName
                 }
             }
-            if($localArray -ne $null){
+            elseif($localArray.count -gt 0){
                 foreach($record in $localArray){
-                    Write-Verbose "Removing $($record.name): $($record.RecordData) from local zone $($ZoneName)"
-                    Remove-DnsServerResourceRecord -ZoneName $ZoneName -RRType A -Name $record.name -RecordData $record.RecordData -Force
+                    SyncRecords -SyncDirection SyncToCloud -HostName $record.name -RecordData $record.RecordData -ZoneName $ZoneName
                 }
             }
         }
