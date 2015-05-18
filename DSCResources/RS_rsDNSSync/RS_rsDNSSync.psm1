@@ -121,7 +121,7 @@ function Set-TargetResource{
 
             $localRecords = GetLocalRecords -ZoneName $ZoneName
             $cloudArray = CompareRecords -records $localRecords -foreignRecords $cloudRecords
-            if(($localRecords -ne $null) -or ($localRecords.count -ne 0)){
+            if($localRecords.count -gt 0){
                 $localArray = CompareRecords -records $cloudRecords -foreignRecords $localRecords
             }
             if($cloudArray.count -gt 0){
