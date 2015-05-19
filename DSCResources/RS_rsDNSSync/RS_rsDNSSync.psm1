@@ -96,7 +96,7 @@ function Test-TargetResource{
                 Write-Verbose "Comparing local records to cloud records"
                 $localArray = CompareRecords -sourceRecords $cloudRecords -targetRecords $localRecords
                 
-                if(($cloudArray + $localArray) -ne $null){Write-Verbose "One or more DNS records are out of Sync"; Return $false}
+                if(($cloudArray -ne $null) -or ($localArray -ne $null)){Write-Verbose "One or more DNS records are out of Sync"; Return $false}
                 else{Write-Verbose "Servers in API match records in Local DNS Server"; Return $true}
             }
         }
