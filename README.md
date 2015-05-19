@@ -6,7 +6,7 @@ rsDNSSync SyncZone{
 }
 ```
 
-## v2.0.0
+## Latest Release v2.0.2
 New Release with improved code. This release also includes the option to add custom Records to a separate zone.
 
 ```Posh

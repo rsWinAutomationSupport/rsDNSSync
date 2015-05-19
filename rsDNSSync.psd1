@@ -15,7 +15,7 @@ CompanyName = 'Rackspace'
 Copyright = '(c) 2014 Rackspace. All rights reserved.'
 
 # Description of the functionality provided by this module
-Description = 'Module with DSC Resources for rsSysInternals area'
+Description = 'Module with DSC Resources for rsDNSSync area'
 
 # Minimum version of the Windows PowerShell engine required by this module
 PowerShellVersion = '4.0'
