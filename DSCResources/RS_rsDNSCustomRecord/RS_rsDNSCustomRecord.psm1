@@ -6,7 +6,7 @@
         $recordData
     )
     
-    $record = Get-DnsServerResourceRecord -Name $recordName -RRType $recordType -ZoneName $ZoneName
+    $record = Get-DnsServerResourceRecord -Name $recordName -RRType $recordType -ZoneName $ZoneName -ErrorAction SilentlyContinue
     if($record -eq $null){Write-Verbose "No record found matching $($HostName)";Return $false}
     switch($recordType){
         A{
@@ -109,9 +109,11 @@ function Test-TargetResource{
                 switch($Ensure){
                     Present{
                         if(!($recordState)){Write-Verbose "DSC Config requires record $($HostName) and could not locate record.";Return $false}
+                        else{Return $true}
                     }
                     Absent{
                         if($recordState){Write-Verbose "DSC Config does not require record $($HostName) however record is present.";Return $false}
+                        else{Return $true}
                     }
                 }
             }
